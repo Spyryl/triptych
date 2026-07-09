@@ -76,6 +76,29 @@ impl SentinelCapsule {
                 out.push_str(&format!("      line: {}\n", heading.line));
             }
         }
+        out.push_str("  examples:\n");
+        if self.evidence.examples.is_empty() {
+            out.push_str("    []\n");
+        } else {
+            for example in &self.evidence.examples {
+                out.push_str("    - ");
+                push_yaml_string_inline(&mut out, "label", &example.label);
+                out.push_str(&format!("      line: {}\n", example.line));
+                match &example.language {
+                    Some(language) => push_yaml_string(&mut out, 6, "language", language),
+                    None => out.push_str("      language: null\n"),
+                }
+                out.push_str("      body:\n");
+                if example.body.is_empty() {
+                    out.push_str("        []\n");
+                } else {
+                    for line in &example.body {
+                        out.push_str("        - ");
+                        push_yaml_string_inline(&mut out, "text", line);
+                    }
+                }
+            }
+        }
         out.push_str("rules:\n");
         push_rules(&mut out, "must", &self.evidence, RuleKind::Must);
         push_rules(&mut out, "must_not", &self.evidence, RuleKind::MustNot);
@@ -129,6 +152,16 @@ fn push_rules(out: &mut String, label: &str, evidence: &MarkdownEvidence, kind: 
         out.push_str("      evidence:\n");
         out.push_str("        - ");
         out.push_str(&format!("line: {}\n", rule.line));
+        out.push_str("      children:\n");
+        if rule.children.is_empty() {
+            out.push_str("        []\n");
+        } else {
+            for child in &rule.children {
+                out.push_str("        - ");
+                push_yaml_string_inline(out, "text", &child.text);
+                out.push_str(&format!("          line: {}\n", child.line));
+            }
+        }
     }
 }
 
@@ -186,7 +219,9 @@ fn path_string(path: &Path) -> String {
 mod tests {
     use std::path::PathBuf;
 
-    use crate::sentinel::markdown::{Heading, MarkdownEvidence, RuleLine};
+    use crate::sentinel::markdown::{
+        DoctrineExample, Heading, MarkdownEvidence, RuleChild, RuleLine,
+    };
 
     use super::*;
 
@@ -211,6 +246,16 @@ mod tests {
                     kind: RuleKind::MustNot,
                     text: "Records must not save themselves.".to_string(),
                     line: 4,
+                    children: vec![RuleChild {
+                        text: "Use the persistence owner instead.".to_string(),
+                        line: 5,
+                    }],
+                }],
+                examples: vec![DoctrineExample {
+                    label: "Bad".to_string(),
+                    line: 7,
+                    language: Some("ts".to_string()),
+                    body: vec!["rec.save();".to_string()],
                 }],
             },
         };
@@ -218,7 +263,9 @@ mod tests {
         let yaml = capsule.to_yaml();
 
         assert!(yaml.contains("schema_version: 1"));
+        assert!(yaml.contains("examples:"));
         assert!(yaml.contains("must_not:"));
+        assert!(yaml.contains("Use the persistence owner instead."));
         assert!(yaml.contains("line: 4"));
     }
 }

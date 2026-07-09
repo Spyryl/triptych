@@ -42,6 +42,8 @@ Each capsule records:
 - SHA-256
 - markdown title and headings
 - explicit rule-like lines with source line numbers
+- immediate child bullets under rule stems
+- short fenced examples labelled as examples, good, bad, allowed, or not allowed
 
 Triptych reuses an existing capsule when recorded `mtime + size` match the
 current source file. If either value differs, Triptych regenerates the capsule
@@ -52,6 +54,12 @@ and records the new SHA-256.
 V1 extraction is conservative. Triptych may classify explicit rule language such
 as `must`, `must not`, `should`, `do not`, and `never`, but it must not invent
 doctrine from surrounding prose.
+
+When a rule-like line is a stem, Triptych attaches the immediate bullet or
+numbered-list children beneath that stem. When a short fenced code block is
+introduced by a label such as `Good`, `Bad`, `Example`, `Allowed`, or
+`Not allowed`, or by a rule-like stem such as `Operational code should read
+like:`, Triptych preserves it under `doc.examples`.
 
 Sentinel remains responsible for selecting relevant capsules and using them in
 review prompts.

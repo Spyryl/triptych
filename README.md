@@ -110,12 +110,24 @@ Capsules are YAML with these stable top-level fields:
 
 - `title`
 - `headings[]`
+- `examples[]`
 
 Each heading contains:
 
 - `level`
 - `text`
 - `line`
+
+Each example contains:
+
+- `label`
+- `line`
+- `language`
+- `body[]`
+
+Examples are fenced blocks introduced by explicit labels such as `Good`, `Bad`,
+`Example`, `Allowed`, `Not allowed`, or by rule-like stems such as
+`Operational code should read like:`.
 
 `rules` fields:
 
@@ -128,10 +140,29 @@ Each rule contains:
 
 - `text`
 - `evidence[]`
+- `children[]`
 
 Each evidence entry contains:
 
 - `line`
+
+Each child entry contains:
+
+- `text`
+- `line`
+
+Child entries are immediate bullet or numbered-list items attached to a rule
+stem such as `Operational code should not:` or `Not allowed:`.
+
+## Relevance Boundary
+
+Triptych does not discover or rank doctrine documents in this version. It
+processes exactly the evidence paths Sentinel passes through `--evidence` or
+`--evidence-list`.
+
+Sentinel is responsible for selecting task-relevant Markdown files before
+calling Triptych. This keeps Triptych deterministic and prevents hidden
+topic-ranking behaviour inside the capsule compiler.
 
 ## Sentinel Example
 
