@@ -1,0 +1,57 @@
+# Sentinel Capsules
+
+Triptych's Sentinel rail is a deterministic evidence compiler.
+
+It reads markdown files supplied by Sentinel, writes small YAML capsules under a
+Sentinel-provided cache root, and returns the capsule paths. It does not call an
+LLM and it does not depend on Docent.
+
+## Command
+
+```bash
+triptych sentinel build \
+  --project-root /path/to/project \
+  --cache-root /path/to/project/.sentinel/doctrine-cache \
+  --evidence /path/to/project/documentation/architecture/core.md
+```
+
+Use `--evidence` more than once, or pass a newline-delimited file:
+
+```bash
+triptych sentinel build \
+  --project-root /path/to/project \
+  --cache-root /path/to/project/.sentinel/doctrine-cache \
+  --evidence-list /tmp/sentinel-evidence.txt
+```
+
+## Cache Contract
+
+Capsule paths mirror the evidence file path relative to `--project-root`.
+
+```text
+documentation/implementation/core/index.md
+-> <cache-root>/documentation/implementation/core/index.yml
+```
+
+Each capsule records:
+
+- source absolute path
+- source project-relative path
+- modified time in Unix milliseconds
+- file size
+- SHA-256
+- markdown title and headings
+- explicit rule-like lines with source line numbers
+
+Triptych reuses an existing capsule when recorded `mtime + size` match the
+current source file. If the cheap check differs, Triptych compares SHA-256. A
+changed SHA-256 regenerates the capsule.
+
+## Extraction Rule
+
+V1 extraction is conservative. Triptych may classify explicit rule language such
+as `must`, `must not`, `should`, `do not`, and `never`, but it must not invent
+doctrine from surrounding prose.
+
+Sentinel remains responsible for selecting relevant capsules and using them in
+review prompts.
