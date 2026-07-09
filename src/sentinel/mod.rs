@@ -6,7 +6,7 @@ pub mod input;
 pub mod markdown;
 pub mod sha256;
 
-pub use build::{BuildReport, build_sentinel_capsules};
+pub use build::{BuildReport, CapsuleBuildResult, CapsuleBuildStatus, build_sentinel_capsules};
 pub use input::SentinelBuildRequest;
 
 pub type Result<T> = std::result::Result<T, SentinelError>;

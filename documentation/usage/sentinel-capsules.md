@@ -3,8 +3,8 @@
 Triptych's Sentinel rail is a deterministic evidence compiler.
 
 It reads markdown files supplied by Sentinel, writes small YAML capsules under a
-Sentinel-provided cache root, and returns the capsule paths. It does not call an
-LLM and it does not depend on Docent.
+Sentinel-provided cache root, and returns a JSON report describing each capsule.
+It does not call an LLM and it does not depend on Docent.
 
 ## Command
 
@@ -44,8 +44,8 @@ Each capsule records:
 - explicit rule-like lines with source line numbers
 
 Triptych reuses an existing capsule when recorded `mtime + size` match the
-current source file. If the cheap check differs, Triptych compares SHA-256. A
-changed SHA-256 regenerates the capsule.
+current source file. If either value differs, Triptych regenerates the capsule
+and records the new SHA-256.
 
 ## Extraction Rule
 

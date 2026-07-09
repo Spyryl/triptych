@@ -9,7 +9,31 @@ use crate::sentinel::markdown::extract_markdown_evidence;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BuildReport {
-    pub capsules: Vec<PathBuf>,
+    pub capsules: Vec<CapsuleBuildResult>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CapsuleBuildResult {
+    pub source: PathBuf,
+    pub capsule: PathBuf,
+    pub status: CapsuleBuildStatus,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum CapsuleBuildStatus {
+    Created,
+    Reused,
+    Updated,
+}
+
+impl CapsuleBuildStatus {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::Created => "created",
+            Self::Reused => "reused",
+            Self::Updated => "updated",
+        }
+    }
 }
 
 pub fn build_sentinel_capsules(request: &SentinelBuildRequest) -> Result<BuildReport> {
@@ -21,16 +45,29 @@ pub fn build_sentinel_capsules(request: &SentinelBuildRequest) -> Result<BuildRe
         let current = SourceFingerprint::from_file(&source.absolute_path)?;
 
         if capsule_matches_current_metadata(&capsule_path, &current)? {
-            capsules.push(capsule_path);
+            capsules.push(CapsuleBuildResult {
+                source: source.project_relative_path,
+                capsule: capsule_path,
+                status: CapsuleBuildStatus::Reused,
+            });
             continue;
         }
 
+        let status = if capsule_path.exists() {
+            CapsuleBuildStatus::Updated
+        } else {
+            CapsuleBuildStatus::Created
+        };
         let content = std::fs::read_to_string(&source.absolute_path)?;
         let evidence = extract_markdown_evidence(&content);
         let capsule = SentinelCapsule::from_parts(&source, current, evidence);
         ensure_parent_dir(&capsule_path)?;
         std::fs::write(&capsule_path, capsule.to_yaml())?;
-        capsules.push(capsule_path);
+        capsules.push(CapsuleBuildResult {
+            source: source.project_relative_path,
+            capsule: capsule_path,
+            status,
+        });
     }
 
     Ok(BuildReport { capsules })
@@ -67,8 +104,10 @@ mod tests {
         let first = build_sentinel_capsules(&request).unwrap();
         let second = build_sentinel_capsules(&request).unwrap();
 
-        assert_eq!(first.capsules, second.capsules);
-        assert!(first.capsules[0].exists());
+        assert_eq!(first.capsules[0].capsule, second.capsules[0].capsule);
+        assert_eq!(first.capsules[0].status, CapsuleBuildStatus::Created);
+        assert_eq!(second.capsules[0].status, CapsuleBuildStatus::Reused);
+        assert!(first.capsules[0].capsule.exists());
 
         fs::remove_dir_all(root).unwrap();
     }

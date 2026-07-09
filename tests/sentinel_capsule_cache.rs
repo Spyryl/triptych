@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use std::thread::sleep;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-use triptych::sentinel::{SentinelBuildRequest, build_sentinel_capsules};
+use triptych::sentinel::{CapsuleBuildStatus, SentinelBuildRequest, build_sentinel_capsules};
 
 #[test]
 fn creates_and_reuses_capsule_for_fresh_evidence() {
@@ -15,11 +15,13 @@ fn creates_and_reuses_capsule_for_fresh_evidence() {
 
     let request = SentinelBuildRequest::new(&fixture.project, &fixture.cache, vec![evidence]);
     let first = build_sentinel_capsules(&request).unwrap();
-    let first_yaml = fs::read_to_string(&first.capsules[0]).unwrap();
+    let first_yaml = fs::read_to_string(&first.capsules[0].capsule).unwrap();
     let second = build_sentinel_capsules(&request).unwrap();
-    let second_yaml = fs::read_to_string(&second.capsules[0]).unwrap();
+    let second_yaml = fs::read_to_string(&second.capsules[0].capsule).unwrap();
 
-    assert_eq!(first.capsules, second.capsules);
+    assert_eq!(first.capsules[0].capsule, second.capsules[0].capsule);
+    assert_eq!(first.capsules[0].status, CapsuleBuildStatus::Created);
+    assert_eq!(second.capsules[0].status, CapsuleBuildStatus::Reused);
     assert_eq!(first_yaml, second_yaml);
     assert!(first_yaml.contains("must_not:"));
 }
@@ -35,7 +37,7 @@ fn regenerates_capsule_when_source_content_changes() {
     let request =
         SentinelBuildRequest::new(&fixture.project, &fixture.cache, vec![evidence.clone()]);
     let first = build_sentinel_capsules(&request).unwrap();
-    let first_yaml = fs::read_to_string(&first.capsules[0]).unwrap();
+    let first_yaml = fs::read_to_string(&first.capsules[0].capsule).unwrap();
 
     sleep(Duration::from_millis(2));
     fs::write(
@@ -45,9 +47,10 @@ fn regenerates_capsule_when_source_content_changes() {
     .unwrap();
 
     let second = build_sentinel_capsules(&request).unwrap();
-    let second_yaml = fs::read_to_string(&second.capsules[0]).unwrap();
+    let second_yaml = fs::read_to_string(&second.capsules[0].capsule).unwrap();
 
-    assert_eq!(first.capsules, second.capsules);
+    assert_eq!(first.capsules[0].capsule, second.capsules[0].capsule);
+    assert_eq!(second.capsules[0].status, CapsuleBuildStatus::Updated);
     assert_ne!(first_yaml, second_yaml);
     assert!(second_yaml.contains("should:"));
 }
@@ -63,11 +66,19 @@ fn returns_one_capsule_path_per_evidence_file() {
 
     assert_eq!(report.capsules.len(), 2);
     assert_eq!(
-        report.capsules[0],
+        report.capsules[0].source,
+        PathBuf::from("documentation/core/index.md")
+    );
+    assert_eq!(
+        report.capsules[0].capsule,
         fixture.cache.join("documentation/core/index.yml")
     );
     assert_eq!(
-        report.capsules[1],
+        report.capsules[1].source,
+        PathBuf::from("documentation/core/records.md")
+    );
+    assert_eq!(
+        report.capsules[1].capsule,
         fixture.cache.join("documentation/core/records.yml")
     );
 }

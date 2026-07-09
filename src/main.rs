@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use triptych::sentinel::input::read_evidence_list;
-use triptych::sentinel::{SentinelBuildRequest, build_sentinel_capsules};
+use triptych::sentinel::{CapsuleBuildResult, SentinelBuildRequest, build_sentinel_capsules};
 
 fn main() {
     if let Err(error) = run() {
@@ -112,18 +112,32 @@ fn print_sentinel_build_help() {
     println!("  --cache-root <path>        Sentinel evidence cache root");
     println!("  --evidence <file>          Markdown evidence file; repeatable");
     println!("  --evidence-list <file>     Newline-delimited markdown evidence paths");
+    println!();
+    println!("stdout:");
+    println!("  JSON report with ok=true and capsules[] entries");
+    println!("  capsule status is created, reused, or updated");
+    println!();
+    println!("stderr:");
+    println!("  JSON error object on failure");
 }
 
-fn print_capsule_report(capsules: &[PathBuf]) {
+fn print_capsule_report(capsules: &[CapsuleBuildResult]) {
     println!("{{");
+    println!("  \"ok\": true,");
     println!("  \"capsules\": [");
-    for (idx, capsule) in capsules.iter().enumerate() {
+    for (idx, result) in capsules.iter().enumerate() {
         let comma = if idx + 1 == capsules.len() { "" } else { "," };
+        println!("    {{");
         println!(
-            "    \"{}\"{}",
-            json_escape(&capsule.to_string_lossy()),
-            comma
+            "      \"source\": \"{}\",",
+            json_escape(&result.source.to_string_lossy())
         );
+        println!(
+            "      \"capsule\": \"{}\",",
+            json_escape(&result.capsule.to_string_lossy())
+        );
+        println!("      \"status\": \"{}\"", result.status.as_str());
+        println!("    }}{}", comma);
     }
     println!("  ]");
     println!("}}");
