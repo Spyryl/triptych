@@ -12,6 +12,7 @@ It does not call an LLM and it does not depend on Docent.
 triptych sentinel build \
   --project-root /path/to/project \
   --cache-root /path/to/project/.sentinel/doctrine-cache \
+  --cache-format yml \
   --evidence /path/to/project/documentation/architecture/core.md
 ```
 
@@ -21,8 +22,12 @@ Use `--evidence` more than once, or pass a newline-delimited file:
 triptych sentinel build \
   --project-root /path/to/project \
   --cache-root /path/to/project/.sentinel/doctrine-cache \
+  --cache-format json \
   --evidence-list /tmp/sentinel-evidence.txt
 ```
+
+`--cache-format` is optional and defaults to `yml`. Supported values are `yml`,
+`yaml`, and `json`. CLI stdout is JSON regardless of cache format.
 
 ## Cache Contract
 
@@ -31,6 +36,13 @@ Capsule paths mirror the evidence file path relative to `--project-root`.
 ```text
 documentation/implementation/core/index.md
 -> <cache-root>/documentation/implementation/core/index.yml
+```
+
+With `--cache-format json`, Triptych writes:
+
+```text
+documentation/implementation/core/index.md
+-> <cache-root>/documentation/implementation/core/index.json
 ```
 
 Each capsule records:

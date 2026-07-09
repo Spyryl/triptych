@@ -13,6 +13,7 @@ loading raw Markdown.
 triptych sentinel build \
   --project-root <project> \
   --cache-root <cache> \
+  --cache-format <yml|json> \
   --evidence <file>
 ```
 
@@ -20,8 +21,10 @@ Arguments:
 
 - `--project-root <project>` is required. Evidence files must resolve inside
   this directory.
-- `--cache-root <cache>` is required. Triptych writes YAML capsules under this
+- `--cache-root <cache>` is required. Triptych writes cache capsules under this
   directory.
+- `--cache-format <yml|json>` is optional. It controls cache file format and
+  defaults to `yml`.
 - `--evidence <file>` adds one Markdown evidence file. It is repeatable.
 - `--evidence-list <file>` adds newline-delimited evidence paths. Blank lines
   and lines starting with `#` are ignored. This option is stable for Sentinel
@@ -39,7 +42,8 @@ outside `--project-root`. It does not currently return skipped entries.
 
 ## Stdout
 
-Successful `sentinel build` commands write machine-readable JSON to stdout:
+Successful `sentinel build` commands always write machine-readable JSON to
+stdout, regardless of cache file format:
 
 ```json
 {
@@ -81,6 +85,13 @@ documentation/implementation/core/index.md
 -> <cache-root>/documentation/implementation/core/index.yml
 ```
 
+With `--cache-format json`, the same path is written as:
+
+```text
+documentation/implementation/core/index.md
+-> <cache-root>/documentation/implementation/core/index.json
+```
+
 Triptych reuses an existing capsule when the capsule's recorded `mtime_unix_ms`
 and `size` match the current source file. If either value differs, Triptych
 regenerates the capsule and records the current SHA-256.
@@ -90,7 +101,8 @@ gate in this version.
 
 ## Capsule Schema
 
-Capsules are YAML with these stable top-level fields:
+Capsules are YAML by default and JSON when `--cache-format json` is passed. Both
+formats use these stable top-level fields:
 
 - `schema_version`: currently `1`.
 - `generator`: currently `triptych-sentinel`.
@@ -170,6 +182,7 @@ topic-ranking behaviour inside the capsule compiler.
 triptych sentinel build \
   --project-root /Volumes/Development/Projects/NodeJS/Foodchoo-Financial \
   --cache-root /Volumes/Development/Projects/NodeJS/Foodchoo-Financial/.sentinel/triptych-cache \
+  --cache-format yml \
   --evidence /Volumes/Development/Projects/NodeJS/Foodchoo-Financial/documentation/implementation/core/lazy-vs-lego-doctrine.md
 ```
 
@@ -185,7 +198,8 @@ For `schema_version: 1`, Sentinel can rely on:
 - JSON stdout shape for successful `sentinel build` runs.
 - JSON stderr shape for Triptych-owned failures.
 - `--evidence-list` support.
-- cache path mirroring from project-relative Markdown path to `.yml`.
+- `--cache-format yml|json` support.
+- cache path mirroring from project-relative Markdown path to `.yml` or `.json`.
 - capsule fields listed in this README.
 - status values `created`, `reused`, and `updated`.
 

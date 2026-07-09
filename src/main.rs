@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use triptych::sentinel::input::read_evidence_list;
+use triptych::sentinel::input::{CapsuleFormat, read_evidence_list};
 use triptych::sentinel::{CapsuleBuildResult, SentinelBuildRequest, build_sentinel_capsules};
 
 fn main() {
@@ -44,6 +44,7 @@ fn run_sentinel_build(args: Vec<String>) -> triptych::sentinel::Result<()> {
 
     let mut project_root = None;
     let mut cache_root = None;
+    let mut cache_format = CapsuleFormat::Yaml;
     let mut evidence_files = Vec::new();
     let mut idx = 0;
 
@@ -56,6 +57,16 @@ fn run_sentinel_build(args: Vec<String>) -> triptych::sentinel::Result<()> {
             "--cache-root" => {
                 idx += 1;
                 cache_root = args.get(idx).map(PathBuf::from);
+            }
+            "--cache-format" => {
+                idx += 1;
+                let Some(value) = args.get(idx) else {
+                    return Err(triptych::sentinel::SentinelError::new(
+                        "ARGUMENT_REQUIRED",
+                        "--cache-format requires yml or json",
+                    ));
+                };
+                cache_format = CapsuleFormat::parse(value)?;
             }
             "--evidence" => {
                 idx += 1;
@@ -90,7 +101,8 @@ fn run_sentinel_build(args: Vec<String>) -> triptych::sentinel::Result<()> {
         triptych::sentinel::SentinelError::new("ARGUMENT_REQUIRED", "--cache-root is required")
     })?;
 
-    let request = SentinelBuildRequest::new(project_root, cache_root, evidence_files);
+    let request = SentinelBuildRequest::new(project_root, cache_root, evidence_files)
+        .with_cache_format(cache_format);
     let report = build_sentinel_capsules(&request)?;
     print_capsule_report(&report.capsules);
     Ok(())
@@ -110,6 +122,7 @@ fn print_sentinel_build_help() {
     println!("triptych sentinel build");
     println!("  --project-root <path>      Analysed project root");
     println!("  --cache-root <path>        Sentinel evidence cache root");
+    println!("  --cache-format <yml|json>  Cache capsule format; default yml");
     println!("  --evidence <file>          Markdown evidence file; repeatable");
     println!("  --evidence-list <file>     Newline-delimited markdown evidence paths");
     println!();

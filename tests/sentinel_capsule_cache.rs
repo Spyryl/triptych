@@ -3,7 +3,9 @@ use std::path::PathBuf;
 use std::thread::sleep;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-use triptych::sentinel::{CapsuleBuildStatus, SentinelBuildRequest, build_sentinel_capsules};
+use triptych::sentinel::{
+    CapsuleBuildStatus, CapsuleFormat, SentinelBuildRequest, build_sentinel_capsules,
+};
 
 #[test]
 fn creates_and_reuses_capsule_for_fresh_evidence() {
@@ -81,6 +83,30 @@ fn returns_one_capsule_path_per_evidence_file() {
         report.capsules[1].capsule,
         fixture.cache.join("documentation/core/records.yml")
     );
+}
+
+#[test]
+fn can_write_and_reuse_json_capsules() {
+    let fixture = Fixture::new("json");
+    let evidence = fixture.write_evidence(
+        "documentation/core/index.md",
+        "# Core\n\nRecords must not save themselves.\n",
+    );
+
+    let request = SentinelBuildRequest::new(&fixture.project, &fixture.cache, vec![evidence])
+        .with_cache_format(CapsuleFormat::Json);
+    let first = build_sentinel_capsules(&request).unwrap();
+    let first_json = fs::read_to_string(&first.capsules[0].capsule).unwrap();
+    let second = build_sentinel_capsules(&request).unwrap();
+
+    assert_eq!(
+        first.capsules[0].capsule,
+        fixture.cache.join("documentation/core/index.json")
+    );
+    assert_eq!(first.capsules[0].status, CapsuleBuildStatus::Created);
+    assert_eq!(second.capsules[0].status, CapsuleBuildStatus::Reused);
+    assert!(first_json.contains("\"schema_version\": 1"));
+    assert!(first_json.contains("\"must_not\""));
 }
 
 struct Fixture {

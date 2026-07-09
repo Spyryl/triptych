@@ -7,12 +7,46 @@ pub struct SentinelBuildRequest {
     pub project_root: PathBuf,
     pub cache_root: PathBuf,
     pub evidence_files: Vec<PathBuf>,
+    pub cache_format: CapsuleFormat,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct EvidenceSource {
     pub absolute_path: PathBuf,
     pub project_relative_path: PathBuf,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CapsuleFormat {
+    Yaml,
+    Json,
+}
+
+impl CapsuleFormat {
+    pub fn parse(value: &str) -> Result<Self> {
+        match value {
+            "yml" | "yaml" => Ok(Self::Yaml),
+            "json" => Ok(Self::Json),
+            other => Err(SentinelError::new(
+                "UNSUPPORTED_CACHE_FORMAT",
+                format!("unsupported cache format: {}", other),
+            )),
+        }
+    }
+
+    pub fn extension(&self) -> &'static str {
+        match self {
+            Self::Yaml => "yml",
+            Self::Json => "json",
+        }
+    }
+
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::Yaml => "yml",
+            Self::Json => "json",
+        }
+    }
 }
 
 impl SentinelBuildRequest {
@@ -25,7 +59,13 @@ impl SentinelBuildRequest {
             project_root: project_root.into(),
             cache_root: cache_root.into(),
             evidence_files,
+            cache_format: CapsuleFormat::Yaml,
         }
+    }
+
+    pub fn with_cache_format(mut self, cache_format: CapsuleFormat) -> Self {
+        self.cache_format = cache_format;
+        self
     }
 
     pub fn resolve_sources(&self) -> Result<Vec<EvidenceSource>> {

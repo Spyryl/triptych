@@ -4,6 +4,7 @@ use crate::sentinel::Result;
 use crate::sentinel::cache::{capsule_path, ensure_parent_dir};
 use crate::sentinel::capsule::SentinelCapsule;
 use crate::sentinel::fingerprint::SourceFingerprint;
+use crate::sentinel::input::CapsuleFormat;
 use crate::sentinel::input::SentinelBuildRequest;
 use crate::sentinel::markdown::extract_markdown_evidence;
 
@@ -41,10 +42,10 @@ pub fn build_sentinel_capsules(request: &SentinelBuildRequest) -> Result<BuildRe
     let mut capsules = Vec::with_capacity(sources.len());
 
     for source in sources {
-        let capsule_path = capsule_path(&request.cache_root, &source)?;
+        let capsule_path = capsule_path(&request.cache_root, &source, request.cache_format)?;
         let current = SourceFingerprint::from_file(&source.absolute_path)?;
 
-        if capsule_matches_current_metadata(&capsule_path, &current)? {
+        if capsule_matches_current_metadata(&capsule_path, request.cache_format, &current)? {
             capsules.push(CapsuleBuildResult {
                 source: source.project_relative_path,
                 capsule: capsule_path,
@@ -62,7 +63,11 @@ pub fn build_sentinel_capsules(request: &SentinelBuildRequest) -> Result<BuildRe
         let evidence = extract_markdown_evidence(&content);
         let capsule = SentinelCapsule::from_parts(&source, current, evidence);
         ensure_parent_dir(&capsule_path)?;
-        std::fs::write(&capsule_path, capsule.to_yaml())?;
+        let rendered = match request.cache_format {
+            CapsuleFormat::Yaml => capsule.to_yaml(),
+            CapsuleFormat::Json => capsule.to_json(),
+        };
+        std::fs::write(&capsule_path, rendered)?;
         capsules.push(CapsuleBuildResult {
             source: source.project_relative_path,
             capsule: capsule_path,
@@ -73,12 +78,16 @@ pub fn build_sentinel_capsules(request: &SentinelBuildRequest) -> Result<BuildRe
     Ok(BuildReport { capsules })
 }
 
-fn capsule_matches_current_metadata(path: &PathBuf, current: &SourceFingerprint) -> Result<bool> {
+fn capsule_matches_current_metadata(
+    path: &PathBuf,
+    format: CapsuleFormat,
+    current: &SourceFingerprint,
+) -> Result<bool> {
     if !path.exists() {
         return Ok(false);
     }
 
-    let recorded = SentinelCapsule::from_yaml_metadata(path)?;
+    let recorded = SentinelCapsule::from_metadata(path, format)?;
     Ok(recorded.cheap_matches(current))
 }
 
