@@ -63,9 +63,11 @@ and records the new SHA-256.
 
 ## Extraction Rule
 
-V1 extraction is conservative. Triptych may classify explicit rule language such
-as `must`, `must not`, `should`, `do not`, and `never`, but it must not invent
-doctrine from surrounding prose.
+V1 extraction is conservative. Triptych classifies explicit rule language such
+as `must`, `must not`, `should`, `do not`, and `never` from Markdown paragraphs
+and list items. It joins wrapped Markdown blocks before classification so
+assertions are not chopped at source line wraps, but it must not invent doctrine
+from surrounding prose.
 
 When a rule-like line is a stem, Triptych attaches the immediate bullet or
 numbered-list children beneath that stem. When a short fenced code block is
